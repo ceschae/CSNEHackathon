@@ -6,24 +6,29 @@ import android.os.Bundle
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
-import android.widget.TextView
+
+import kotlinx.android.synthetic.main.activity_record_speech.*
+import kotlinx.android.synthetic.main.content_record_speech.*
 
 /**
  * Created by cesch on 4/7/2018.
  */
 class SpeechListener(private val context: Context,
-                     private val callback: RecordSpeech,
-                     private val returnedText: TextView) : RecognitionListener {
+                     private val parent: MainActivity) : RecognitionListener {
 
     private lateinit var sRecognizer : SpeechRecognizer
     private lateinit var rIntent : Intent
     private var isListening = false
+    public var currText = ""
 
     fun initialize() {
         rIntent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
         rIntent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_WEB_SEARCH)
         rIntent.putExtra(RecognizerIntent.EXTRA_CONFIDENCE_SCORES, true)
         rIntent.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
+        rIntent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3)
+        rIntent.putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true)
+        rIntent.putExtra(RecognizerIntent.EXTRA_RESULTS, true)
 
         if (SpeechRecognizer.isRecognitionAvailable(context)) {
             sRecognizer = SpeechRecognizer.createSpeechRecognizer(context)
@@ -32,7 +37,9 @@ class SpeechListener(private val context: Context,
     }
 
     fun startListening() {
+        currText = "in startListening..."
         if (!isListening) {
+            currText = "isListening..."
             isListening = true
             sRecognizer.startListening(rIntent)
         }
@@ -43,8 +50,7 @@ class SpeechListener(private val context: Context,
     }
 
     private fun onResults(results: List<String>, scores: FloatArray?) {
-        val text = results.joinToString(separator = "\n")
-        returnedText.text = text
+        parent.pushFinalResult(results, scores)
     }
 
     override fun onResults(results: Bundle) {
@@ -53,7 +59,7 @@ class SpeechListener(private val context: Context,
         if (matches != null) {
             onResults(matches, scores)
         }
-        isListening = false
+        startListening()
     }
 
     override fun onReadyForSpeech(params: Bundle) {
@@ -68,16 +74,20 @@ class SpeechListener(private val context: Context,
         // why
     }
 
-    override fun onPartialResults(p0: Bundle?) {
-        // why
+    override fun onPartialResults(results: Bundle?) {
+        val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+        val scores = results?.getFloatArray(SpeechRecognizer.CONFIDENCE_SCORES)
+        if (matches != null) {
+            parent.pushPartial(matches, scores)
+        }
     }
 
     override fun onError(p0: Int) {
-        // why
+        currText = "" + p0
     }
 
     override fun onEvent(p0: Int, p1: Bundle?) {
-        // why
+        currText = "" + p0
     }
 
     override fun onBeginningOfSpeech() {
@@ -85,6 +95,7 @@ class SpeechListener(private val context: Context,
     }
 
     override fun onEndOfSpeech() {
-        // why
+        currText = "hit the end!"
+        isListening = false
     }
 }
