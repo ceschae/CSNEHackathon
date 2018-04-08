@@ -11,6 +11,14 @@ import android.view.MenuItem
 
 import kotlinx.android.synthetic.main.activity_record_speech.*
 import kotlinx.android.synthetic.main.content_record_speech.*
+import android.media.MediaRecorder
+import com.google.firebase.database.DatabaseReference
+import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.database.DatabaseError
+import com.google.firebase.database.DataSnapshot
+import com.google.firebase.database.ValueEventListener
+
+
 
 class MainActivity : AppCompatActivity() {
 
@@ -19,16 +27,48 @@ class MainActivity : AppCompatActivity() {
     }
 
     private lateinit var sListener : SpeechListener
-    private var results = ResultMap()
+    //private lateinit var recorder : MediaRecorder
+    private lateinit var wordStatsRef : DatabaseReference
+    private val wordMap : Map<String, WordInfo> = HashMap<String, WordInfo>()
+
+    data class WordInfo(var word: String = "", var average: Double = 0.0, var count: Long = 0L)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_record_speech)
         setSupportActionBar(toolbar)
 
+        val database = FirebaseDatabase.getInstance()
+        wordStatsRef = database.getReference("word-stats")
+        wordStatsRef.addValueEventListener(object : ValueEventListener {
+            override fun onDataChange(dataSnapshot: DataSnapshot) {
+                if (dataSnapshot!!.exists()){
+                    val children = dataSnapshot!!.children
+                    children.forEach {
+                        var item : WordInfo? = it.getValue(WordInfo::class.java)
+                        if (item != null) {
+                            var tempWord = item.word
+                            if (wordMap.containsKey(tempWord)) {
+                                var tempItem = wordMap.get(tempWord)
+                                tempItem?.average = item.average
+                                tempItem?.count = item.count
+                            } else {
+                                (wordMap as HashMap<String, WordInfo>).put(tempWord, item)
+                            }
+                        }
+                    }
+                }
+            }
+            override fun onCancelled(databaseError: DatabaseError) {}
+        })
 
         sListener = SpeechListener(this, this)
         sListener.initialize()
+
+        //recorder = MediaRecorder()
+        //recorder.setAudioSource(MediaRecorder.AudioSource.MIC)
+        //recorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP)
+        //recorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB)
 
         fab.setOnClickListener {
             askFirst()
@@ -60,15 +100,27 @@ class MainActivity : AppCompatActivity() {
                     sentence = sentence.toLowerCase()
                     var words = sentence.split(" ")
                     for (word in words) {
-                        results.put(word, score)
+                        if (wordMap.containsKey(word)) {
+                            val item = wordMap.get(word)
+                            var currTotal = item!!.count * item!!.average
+                            currTotal += score.toDouble()
+                            item!!.count++
+                            item!!.average = currTotal / item!!.count
+                        } else {
+                            (wordMap as HashMap<String, WordInfo>).put(word, WordInfo(word, score.toDouble(), 1L))
+                        }
                     }
                 }
+                wordStatsRef.updateChildren(wordMap)
             }
         }
     }
 
     fun stopRecord() {
+        sListener.stopRecognition()
         textView.text = sListener.currText
+        //recorder.stop();
+        //recorder.reset();
         if (textView.text == "") {
             textView.text = "Hmm... no data"
         }
@@ -76,6 +128,8 @@ class MainActivity : AppCompatActivity() {
 
     fun recordText() {
         textView.text = "Recording..."
+        //recorder.prepare()
+        //recorder.start()
         sListener.startListening()
         textView.text = sListener.currText
     }
@@ -103,77 +157,6 @@ class MainActivity : AppCompatActivity() {
                 if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                     recordText()
                 }
-            }
-        }
-    }
-
-    private inner class ResultMap {
-        val keySet = ResultHashSet()
-
-        fun put(word: String, rating: Float) {
-            var tempResult = keySet.get(word)
-            if (tempResult == null) {
-                keySet.add(SentenceResult(word, rating))
-            } else {
-                tempResult.addRating(rating)
-            }
-        }
-    }
-
-    private inner class ResultHashSet {
-        private val size = 100663319
-        private val timesPrime = 389
-        val resultArr = arrayOfNulls<SentenceResult>(size)
-
-        fun add(value: SentenceResult) {
-            var hashCode = hashCode(value.word)
-            var soFar = 1
-            while (resultArr[hashCode] != null) {
-                hashCode += soFar * soFar
-                soFar++
-            }
-            resultArr[hashCode] = value
-        }
-
-        fun get(word: String): SentenceResult? {
-            var hashCode = hashCode(word)
-            var soFar = 1
-            while (resultArr[hashCode] != null && !resultArr[hashCode]?.word.equals(word)) {
-                hashCode += soFar * soFar
-                soFar++
-            }
-            if (resultArr[hashCode] != null) {
-                return resultArr[hashCode]
-            } else {
-                return null
-            }
-        }
-
-        private fun hashCode(word: String): Int {
-            var sum = 0
-            for (i in 1..word.length) {
-                sum += word[i].toInt() * i
-            }
-            return sum % size
-        }
-    }
-
-    private inner class SentenceResult(val word: String,
-                                       private var rating: Float) {
-        private var countSaid = 1
-
-        fun addRating(newRating: Float) {
-            var totalFloat = rating * countSaid
-            countSaid++
-            totalFloat += newRating
-            rating = totalFloat / countSaid
-        }
-
-        override fun equals(other: Any?): Boolean {
-            if (other is SentenceResult) {
-                return word.equals(other.word)
-            } else {
-                return false
             }
         }
     }

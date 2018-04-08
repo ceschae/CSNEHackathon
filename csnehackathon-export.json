@@ -1,0 +1,24 @@
+{
+	"word-stats": {
+		"cat": {
+			"word": "cat",
+			"average": 0.9,
+			"count": 1
+		},
+		"dog": {
+			"word": "dog",
+			"average": 0.8,
+			"count": 2
+		},
+		"emu": {
+			"word": "emu",
+			"average": 0.7,
+			"count": 3
+		},
+		"lizard": {
+			"word": "lizard",
+			"average": 0.6,
+			"count": 4
+		}
+	}
+}
