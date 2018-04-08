@@ -1,0 +1,42 @@
+{
+  "project_info": {
+    "project_number": "540662029186",
+    "firebase_url": "https://csnehackathon.firebaseio.com",
+    "project_id": "csnehackathon",
+    "storage_bucket": "csnehackathon.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:540662029186:android:e496a703cb8d6235",
+        "android_client_info": {
+          "package_name": "csne.speechwithinreach"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "540662029186-t6i015g63kjua2bud62ji930ee9ed4lm.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBOerbSJ14QE_xj7STAVLIec8gGitj7irQ"
+        }
+      ],
+      "services": {
+        "analytics_service": {
+          "status": 1
+        },
+        "appinvite_service": {
+          "status": 1,
+          "other_platform_oauth_client": []
+        },
+        "ads_service": {
+          "status": 2
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
